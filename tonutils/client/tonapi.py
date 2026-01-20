@@ -6,6 +6,7 @@ from aiohttp import ClientSession
 from ._base import Client
 from .utils import RunGetMethodStack, RunGetMethodResult, unpack_config
 from ..account import AccountStatus, RawAccount
+from ..exceptions import NotFoundError
 
 
 class TonapiClient(Client):
@@ -19,14 +20,14 @@ class TonapiClient(Client):
     API_VERSION_PATH = "/v2"
 
     def __init__(
-            self,
-            api_key: str,
-            is_testnet: bool = False,
-            base_url: Optional[str] = None,
-            rps: Optional[int] = None,
-            max_retries: int = 1,
-            timeout: Optional[int] = 10,
-            session: Optional[ClientSession] = None,
+        self,
+        api_key: str,
+        is_testnet: bool = False,
+        base_url: Optional[str] = None,
+        rps: Optional[int] = None,
+        max_retries: int = 1,
+        timeout: Optional[int] = 10,
+        session: Optional[ClientSession] = None,
     ) -> None:
         """
         Initialize the TonapiClient.
@@ -57,10 +58,10 @@ class TonapiClient(Client):
         )
 
     async def run_get_method(
-            self,
-            address: Union[str, Address],
-            method_name: str,
-            stack: Optional[List[Any]] = None,
+        self,
+        address: Union[str, Address],
+        method_name: str,
+        stack: Optional[List[Any]] = None,
     ) -> List[Any]:
         if isinstance(address, Address):
             address = address.to_str()
@@ -91,7 +92,10 @@ class TonapiClient(Client):
         code_cell = Cell.one_from_boc(code) if code else None
         data = result.get("data")
         data_cell = Cell.one_from_boc(data) if data else None
-        _lt, _lt_hash = result.get("last_transaction_lt"), result.get("last_transaction_hash")
+        _lt, _lt_hash = (
+            result.get("last_transaction_lt"),
+            result.get("last_transaction_hash"),
+        )
         lt, lt_hash = int(_lt) if _lt else None, _lt_hash if _lt_hash else None
 
         return RawAccount(
@@ -120,17 +124,20 @@ class TonapiClient(Client):
         config_map = HashMap.parse(
             dict_cell=dict_cell[0].begin_parse(),
             key_length=32,
-            key_deserializer=lambda src: Builder().store_bits(src).to_slice().load_int(32),
+            key_deserializer=lambda src: Builder()
+            .store_bits(src)
+            .to_slice()
+            .load_int(32),
             value_deserializer=lambda src: src.load_ref().begin_parse(),
         )
         return unpack_config(config_map)
 
     async def get_transactions(
-            self,
-            address: Union[str, Address],
-            limit: int,
-            from_lt: Optional[int] = None,
-            to_lt: int = 0,
+        self,
+        address: Union[str, Address],
+        limit: int,
+        from_lt: Optional[int] = None,
+        to_lt: int = 0,
     ) -> List[Transaction]:
         if isinstance(address, Address):
             address = address.to_str()
@@ -150,3 +157,13 @@ class TonapiClient(Client):
             transactions.append(Transaction.deserialize(cell_slice))
 
         return transactions
+
+    async def get_transaction(self, transaction_id: str) -> Transaction | None:
+        method = f"/blockchain/transactions/{transaction_id}"
+
+        try:
+            result = await self._get(method=method)
+        except NotFoundError:
+            return None
+        cell_slice = Slice.one_from_boc(result.get("raw"))
+        return Transaction.deserialize(cell_slice)

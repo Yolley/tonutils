@@ -29,10 +29,14 @@ class Client:
         self.max_retries = kwargs.get("max_retries", 0)
 
         self._session: aiohttp.ClientSession = kwargs.get("session", None)
-        self._limiter = AsyncLimiter(
-            max_rate=self.rps,
-            time_period=1,
-        ) if self.rps else None
+        self._limiter = (
+            AsyncLimiter(
+                max_rate=self.rps,
+                time_period=1,
+            )
+            if self.rps
+            else None
+        )
 
     @staticmethod
     async def _parse_response(response: aiohttp.ClientResponse) -> Any:
@@ -55,18 +59,15 @@ class Client:
 
         if isinstance(content, dict) and "ok" in content:
             if not content.get("ok", False):
-                return {
-                    "error": content.get("result"),
-                    "code": content.get("code", 0)
-                }
+                return {"error": content.get("result"), "code": content.get("code", 0)}
             return content.get("result")
 
         return content
 
     @staticmethod
     async def _apply_retry_delay(
-            response: Optional[aiohttp.ClientResponse] = None,
-            default_delay: int = 1,
+        response: Optional[aiohttp.ClientResponse] = None,
+        default_delay: int = 1,
     ) -> None:
         """
         Wait for a retry delay based on the 'Retry-After' header or fallback.
@@ -94,7 +95,7 @@ class Client:
             yield self._session
         else:
             async with aiohttp.ClientSession(
-                    timeout=aiohttp.ClientTimeout(total=self.timeout)
+                timeout=aiohttp.ClientTimeout(total=self.timeout)
             ) as session:
                 yield session
 
@@ -107,11 +108,11 @@ class Client:
             self._session = None
 
     async def _request(
-            self,
-            method: str,
-            path: str,
-            params: Optional[Dict[str, Any]] = None,
-            body: Optional[Dict[str, Any]] = None,
+        self,
+        method: str,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Perform an HTTP request with retry logic for rate limiting (HTTP 429).
@@ -136,21 +137,27 @@ class Client:
             try:
                 async with self._get_session() as session:
                     async with session.request(
-                            method=method,
-                            url=url,
-                            params=params,
-                            headers=self.headers,
-                            json=body,
+                        method=method,
+                        url=url,
+                        params=params,
+                        headers=self.headers,
+                        json=body,
                     ) as response:
                         content = await self._parse_response(response)
 
-                        if response.status == 429 or (isinstance(content, dict) and content.get("code") == 429):
+                        if response.status == 429 or (
+                            isinstance(content, dict) and content.get("code") == 429
+                        ):
                             await self._apply_retry_delay(response)
                             continue
                         if response.status == 401:
                             raise UnauthorizedError(url)
+                        elif response.status == 404:
+                            raise NotFoundError(url, str(content))
                         if not response.ok:
-                            raise HTTPClientResponseError(url, response.status, str(content))
+                            raise HTTPClientResponseError(
+                                url, response.status, str(content)
+                            )
 
                         return content
 
@@ -160,9 +167,9 @@ class Client:
         raise RateLimitExceeded(url, self.max_retries + 1)
 
     async def _get(
-            self,
-            method: str,
-            params: Optional[Dict[str, Any]] = None,
+        self,
+        method: str,
+        params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Make a GET request.
@@ -174,10 +181,10 @@ class Client:
         return await self._request("GET", method, params=params)
 
     async def _post(
-            self,
-            method: str,
-            params: Optional[Dict[str, Any]] = None,
-            body: Optional[Dict[str, Any]] = None,
+        self,
+        method: str,
+        params: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Make a POST request.
@@ -189,10 +196,10 @@ class Client:
         return await self._request("POST", method, params=params, body=body)
 
     async def run_get_method(
-            self,
-            address: Union[str, Address],
-            method_name: str,
-            stack: Optional[List[Any]] = None,
+        self,
+        address: Union[str, Address],
+        method_name: str,
+        stack: Optional[List[Any]] = None,
     ) -> Any:
         """
         Run a get method on a specified address in the blockchain.
@@ -239,11 +246,11 @@ class Client:
         raise NotImplementedError
 
     async def get_transactions(
-            self,
-            address: Union[str, Address],
-            limit: int,
-            from_lt: Optional[int] = None,
-            to_lt: int = 0,
+        self,
+        address: Union[str, Address],
+        limit: int,
+        from_lt: Optional[int] = None,
+        to_lt: int = 0,
     ) -> List[Transaction]:
         """
         Retrieve a list of transactions for a given account.
@@ -262,6 +269,7 @@ class LiteBalancer:
     Placeholder class for LiteBalancer when pytoniq is not available.
     Provides stubs for methods that raise errors when called.
     """
+
     inited = None
 
     @staticmethod
@@ -282,7 +290,9 @@ class LiteBalancer:
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         raise PytoniqDependencyError()
 
-    async def run_get_method(self, address: Union[str, Address], method_name: str, stack: List[Any]) -> Any:
+    async def run_get_method(
+        self, address: Union[str, Address], method_name: str, stack: List[Any]
+    ) -> Any:
         raise PytoniqDependencyError()
 
     async def raw_send_message(self, message: bytes) -> None:
@@ -301,10 +311,13 @@ class LiteBalancer:
         raise PytoniqDependencyError()
 
     async def get_transactions(
-            self,
-            address: Union[str, Address],
-            limit: int,
-            from_lt: Optional[int] = None,
-            to_lt: int = 0,
+        self,
+        address: Union[str, Address],
+        limit: int,
+        from_lt: Optional[int] = None,
+        to_lt: int = 0,
     ) -> List[Transaction]:
+        raise PytoniqDependencyError()
+
+    async def get_transaction(self, transaction_id: str) -> Transaction | None:
         raise PytoniqDependencyError()
