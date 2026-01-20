@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tonutils"
-version = "0.5.6"
+name = "tonutils-fork"
+version = "0.5.7"
 authors = [
     { name = "nessshon" },
 ]
@@ -28,22 +28,22 @@ classifiers = [
 ]
 
 dependencies = [
-    "aiohttp>=3.7.0,<=3.12.2",
+    "aiohttp>=3.7.0",
     "aiolimiter~=1.2.1",
     "cachetools~=5.5.0",
     "pycryptodomex~=3.20.0",
-    "PyNaCl~=1.5.0",
-    "pytoniq-core>=0.1.45",
+    "pynacl~=1.5.0",
+    "pytoniq-core>=0.1.44",
 ]
 
 [project.optional-dependencies]
 pytoniq = ["pytoniq~=0.1.42"]
 
 [project.urls]
-"Homepage" = "https://github.com/nessshon/tonutils"
+"Homepage" = "https://github.com/Yolley/tonutils"
 "Documentation" = "https://nessshon.github.io/tonutils"
-"Examples" = "https://github.com/nessshon/tonutils/tree/main/examples"
-"Source" = "https://github.com/nessshon/tonutils"
+"Examples" = "https://github.com/Yolley/tonutils/tree/main/examples"
+"Source" = "https://github.com/Yolley/tonutils"
 "TON" = "https://ton.org"
 
 [tool.setuptools.packages.find]
