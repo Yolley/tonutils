@@ -1,6 +1,6 @@
 [project]
 name = "tonutils-fork"
-version = "0.6.0"
+version = "0.6.1"
 authors = [
     { name = "nessshon" },
 ]
@@ -24,10 +24,10 @@ classifiers = [
 ]
 dependencies = [
     "aiohttp>=3.7.0",
-    "aiolimiter~=1.2.1",
-    "cachetools~=5.5.0",
-    "pycryptodomex~=3.20.0",
-    "pynacl~=1.5.0",
+    "aiolimiter>=1.2.1",
+    "cachetools>=5.5.0",
+    "pycryptodomex>=3.20.0",
+    "pynacl>=1.5.0",
     "pytoniq-core>=0.1.44",
 ]
 packages = [{ include = "tonutils" }]
@@ -59,3 +59,6 @@ include = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+exclude-newer = "2026-04-10T00:00:00Z"
